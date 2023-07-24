@@ -2,6 +2,6 @@ use anyhow::Result;
 
 use crate::args::Inference;
 
-pub fn run(args: Inference) -> Result<()> {
+pub fn run(_args: Inference) -> Result<()> {
     todo!()
 }

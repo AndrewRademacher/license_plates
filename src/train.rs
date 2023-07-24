@@ -2,7 +2,6 @@ use std::{
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
-    time::Instant,
 };
 
 use anyhow::Result;
@@ -17,7 +16,7 @@ use tch::{
 
 use crate::{args::Train, consts::LABLES, networks::resnet::fast_resnet};
 
-pub fn run(data: PathBuf, args: Train) -> Result<()> {
+pub fn run(data: PathBuf, _args: Train) -> Result<()> {
     let device = Device::Mps;
 
     let spinner = Spinner::new(spinners::Aesthetic, "Loading training set...", Color::Cyan);

@@ -18,7 +18,7 @@ use crate::{
     consts::{IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH},
 };
 
-pub fn run(data: PathBuf, args: Prepare) -> Result<()> {
+pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     let observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
     println!("Building train.array");
     build_observation_array(data.join("train.array"), &observations.train)?;
