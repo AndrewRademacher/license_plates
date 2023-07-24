@@ -1,0 +1,22 @@
+[package]
+name = "license_plates"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.72"
+clap = { version = "4.3.19", features = ["derive"] }
+csv = "1.2.2"
+image = "0.24.6"
+indicatif = "0.17.5"
+memmap2 = "0.7.1"
+ndarray = { version = "0.15.6", features = ["serde", "rayon"] }
+rayon = "1.7.0"
+rmp = "0.8.12"
+rmp-serde = "1.1.2"
+serde = { version = "1.0.174", features = ["derive"] }
+smartstring = { version = "1.0.1", features = ["serde"] }
+spinoff = "0.7.0"
+tch = { version = "0.13.0", features = ["download-libtorch"] }
