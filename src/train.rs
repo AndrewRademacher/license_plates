@@ -29,23 +29,22 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
 
     let spinner = Spinner::new(spinners::Aesthetic, "Constructing network...", Color::Cyan);
     let vs = nn::VarStore::new(device);
-    // let net = fast_resnet(&vs.root());
-    let net = vgg_16(&vs.root(), LABLES, true);
+    let net = fast_resnet(&vs.root());
+    // let net = vgg_16(&vs.root(), LABLES, true);
     spinner.stop_with_message("Network constructed.");
+
+    let epochs = 4i64;
+    let batch_size = 16;
+    let mut test_accuracy = 0.;
+    let progress = ProgressBar::new(m.train_iter(batch_size).count() as u64 * epochs as u64);
+    progress.set_style(
+        ProgressStyle::with_template("[{eta_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}")
+            .unwrap(),
+    );
 
     // let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
     let mut opt = nn::AdamW::default().build(&vs, 1e-3)?;
-    for epoch in 1..5 {
-        let batch_size = 2;
-
-        let progress = ProgressBar::new(m.train_iter(batch_size).count() as u64);
-        progress.set_style(
-            ProgressStyle::with_template(
-                "[{eta_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}",
-            )
-            .unwrap(),
-        );
-
+    for epoch in 0..epochs {
         opt.set_lr(learning_rate(epoch));
         for (bimages, blabels) in m.train_iter(batch_size).shuffle().to_device(vs.device()) {
             let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
@@ -54,32 +53,36 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
                 .cross_entropy_for_logits(&blabels);
             opt.backward_step(&loss);
 
-            progress.set_message(format!("{}", loss.double_value(&[])));
+            progress.set_message(format!(
+                "{:4.4} | {:3.2}%",
+                loss.double_value(&[]),
+                100. * test_accuracy
+            ));
             progress.inc(1);
         }
-        progress.finish();
 
-        let spinner = Spinner::new(
-            spinners::Aesthetic,
-            "Testing network accuracy...",
-            Color::Cyan,
-        );
-        let test_accuracy =
+        // let spinner = Spinner::new(
+        //     spinners::Aesthetic,
+        //     "Testing network accuracy...",
+        //     Color::Cyan,
+        // );
+        test_accuracy =
             net.batch_accuracy_for_logits(&m.test_images, &m.test_labels, vs.device(), 512);
-        spinner.stop_with_message(&format!("Epoch {:4}: {:5.2}%", epoch, 100. * test_accuracy));
+        // spinner.stop_with_message(&format!("Epoch {:4}: {:5.2}%", epoch, 100. * test_accuracy));
     }
+    progress.finish();
     Ok(())
 }
 
 fn learning_rate(epoch: i64) -> f64 {
     if epoch < 1 {
-        0.01
-    } else if epoch < 2 {
         0.001
-    } else if epoch < 3 {
+    } else if epoch < 2 {
         0.0001
-    } else {
+    } else if epoch < 3 {
         0.00001
+    } else {
+        0.000001
     }
 }
 
