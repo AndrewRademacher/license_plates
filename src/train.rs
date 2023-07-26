@@ -29,7 +29,7 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
     spinner.stop_with_message("Network constructed.");
 
     let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
-    for epoch in 1..10 {
+    for epoch in 1..5 {
         let batch_size = 16;
 
         let progress = ProgressBar::new(m.train_iter(batch_size).count() as u64);
@@ -42,7 +42,7 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
 
         opt.set_lr(learning_rate(epoch));
         for (bimages, blabels) in m.train_iter(batch_size).shuffle().to_device(vs.device()) {
-            let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
+            // let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
             let loss = net
                 .forward_t(&bimages, true)
                 .cross_entropy_for_logits(&blabels);
@@ -66,12 +66,14 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
 }
 
 fn learning_rate(epoch: i64) -> f64 {
-    if epoch < 3 {
-        0.1
-    } else if epoch < 6 {
+    if epoch < 1 {
         0.01
-    } else {
+    } else if epoch < 2 {
         0.001
+    } else if epoch < 3 {
+        0.0001
+    } else {
+        0.00001
     }
 }
 

@@ -34,16 +34,29 @@ pub fn fast_resnet(vs: &nn::Path) -> SequentialT {
         .add(nn::linear(
             vs.sub("linear1"),
             4096,
-            2048,
+            4096,
             Default::default(),
         ))
         .add(nn::linear(
             vs.sub("linear2"),
-            2048,
-            1024,
+            4096,
+            4096,
             Default::default(),
         ))
-        .add(nn::linear(vs.sub("linear3"), 1024, 512, Default::default()))
-        .add(nn::linear(vs.sub("linear4"), 512, 50, Default::default()))
+        .add(nn::linear(vs.sub("linear3"), 4096, 50, Default::default()))
+        // .add(nn::linear(
+        //     vs.sub("linear1"),
+        //     4096,
+        //     2048,
+        //     Default::default(),
+        // ))
+        // .add(nn::linear(
+        //     vs.sub("linear2"),
+        //     2048,
+        //     1024,
+        //     Default::default(),
+        // ))
+        // .add(nn::linear(vs.sub("linear3"), 1024, 512, Default::default()))
+        // .add(nn::linear(vs.sub("linear4"), 512, 50, Default::default()))
         .add_fn(|x| x * 0.125)
 }

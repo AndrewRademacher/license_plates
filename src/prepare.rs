@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt::Display,
     fs::File,
     io::{BufReader, BufWriter},
@@ -12,6 +12,7 @@ use ndarray::{Array1, Array4};
 use rayon::prelude::{ParallelBridge, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use smartstring::alias;
+use spinoff::{spinners, Color, Spinner};
 
 use crate::{
     args::Prepare,
@@ -20,15 +21,41 @@ use crate::{
 
 pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     let observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
-    println!("Building train.array");
+
+    let spinner = Spinner::new(spinners::Aesthetic, "Building label map...", Color::Cyan);
+    let label_map = build_label_index(&observations.train);
+    spinner.stop_with_message(&format!("Label map contains {} labels.", label_map.len()));
+    for (name, number) in label_map.iter() {
+        println!("\t{:2}: {}", number, name);
+    }
+
+    let spinner = Spinner::new(spinners::Aesthetic, "Building train arrays...", Color::Cyan);
     build_observation_array(data.join("train.array"), &observations.train)?;
-    build_label_array(data.join("train.label.array"), &observations.train)?;
-    println!("Building test.array");
+    build_label_array(
+        data.join("train.label.array"),
+        &observations.train,
+        &label_map,
+    )?;
+    spinner.stop_with_message("Train arrays complete.");
+
+    let spinner = Spinner::new(spinners::Aesthetic, "Building test arrays...", Color::Cyan);
     build_observation_array(data.join("test.array"), &observations.test)?;
-    build_label_array(data.join("test.label.array"), &observations.test)?;
-    println!("Building valid.array");
+    build_label_array(
+        data.join("test.label.array"),
+        &observations.test,
+        &label_map,
+    )?;
+    spinner.stop_with_message("Test arrays complete.");
+
+    let spinner = Spinner::new(spinners::Aesthetic, "Building valid arrays...", Color::Cyan);
     build_observation_array(data.join("valid.array"), &observations.valid)?;
-    build_label_array(data.join("valid.label.array"), &observations.valid)?;
+    build_label_array(
+        data.join("valid.label.array"),
+        &observations.valid,
+        &label_map,
+    )?;
+    spinner.stop_with_message("Valid arrays complete.");
+
     Ok(())
 }
 
@@ -117,18 +144,22 @@ fn build_observation_array(file: impl AsRef<Path>, entries: &[IndexEntry]) -> Re
     Ok(())
 }
 
-fn build_label_array(file: impl AsRef<Path>, entries: &[IndexEntry]) -> Result<()> {
-    let label_map = entries
+fn build_label_index(entries: &[IndexEntry]) -> BTreeMap<alias::String, usize> {
+    entries
         .iter()
         .map(|v| v.labels.clone())
-        .collect::<HashSet<alias::String>>()
+        .collect::<BTreeSet<alias::String>>()
         .into_iter()
         .enumerate()
         .map(|(idx, label)| (label, idx))
-        .collect::<HashMap<alias::String, usize>>();
+        .collect::<BTreeMap<alias::String, usize>>()
+}
 
-    println!("Labels Found: {}", label_map.len());
-
+fn build_label_array(
+    file: impl AsRef<Path>,
+    entries: &[IndexEntry],
+    label_map: &BTreeMap<alias::String, usize>,
+) -> Result<()> {
     let array = entries
         .iter()
         .map(|v| *label_map.get(&v.labels).unwrap() as i64)
