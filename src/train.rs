@@ -14,7 +14,11 @@ use tch::{
     Device, Tensor,
 };
 
-use crate::{args::Train, consts::LABLES, networks::resnet::fast_resnet};
+use crate::{
+    args::Train,
+    consts::LABLES,
+    networks::{fast_resnet::fast_resnet, vgg::vgg_16},
+};
 
 pub fn run(data: PathBuf, _args: Train) -> Result<()> {
     let device = Device::Mps;
@@ -25,12 +29,14 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
 
     let spinner = Spinner::new(spinners::Aesthetic, "Constructing network...", Color::Cyan);
     let vs = nn::VarStore::new(device);
-    let net = fast_resnet(&vs.root());
+    // let net = fast_resnet(&vs.root());
+    let net = vgg_16(&vs.root(), LABLES, true);
     spinner.stop_with_message("Network constructed.");
 
-    let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
+    // let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
+    let mut opt = nn::AdamW::default().build(&vs, 1e-3)?;
     for epoch in 1..5 {
-        let batch_size = 16;
+        let batch_size = 2;
 
         let progress = ProgressBar::new(m.train_iter(batch_size).count() as u64);
         progress.set_style(
@@ -42,7 +48,7 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
 
         opt.set_lr(learning_rate(epoch));
         for (bimages, blabels) in m.train_iter(batch_size).shuffle().to_device(vs.device()) {
-            // let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
+            let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
             let loss = net
                 .forward_t(&bimages, true)
                 .cross_entropy_for_logits(&blabels);
