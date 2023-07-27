@@ -8,7 +8,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use image::GenericImageView;
-use ndarray::{Array1, Array4};
+use ndarray::{Array1, Array4, ArrayView, Dimension};
 use rayon::prelude::{ParallelBridge, ParallelIterator};
 use serde::{Deserialize, Serialize};
 use smartstring::alias;
@@ -30,7 +30,7 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     }
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building train arrays...", Color::Cyan);
-    build_observation_array(data.join("train.array"), &observations.train)?;
+    let norm = build_observation_array(data.join("train.array"), &observations.train, None)?;
     build_label_array(
         data.join("train.label.array"),
         &observations.train,
@@ -39,7 +39,7 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     spinner.stop_with_message("Train arrays complete.");
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building test arrays...", Color::Cyan);
-    build_observation_array(data.join("test.array"), &observations.test)?;
+    build_observation_array(data.join("test.array"), &observations.test, Some(norm))?;
     build_label_array(
         data.join("test.label.array"),
         &observations.test,
@@ -48,7 +48,7 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     spinner.stop_with_message("Test arrays complete.");
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building valid arrays...", Color::Cyan);
-    build_observation_array(data.join("valid.array"), &observations.valid)?;
+    build_observation_array(data.join("valid.array"), &observations.valid, Some(norm))?;
     build_label_array(
         data.join("valid.label.array"),
         &observations.valid,
@@ -115,7 +115,36 @@ fn index_observations(data: impl AsRef<Path>, index: impl AsRef<Path>) -> Result
     Ok(Observations { train, test, valid })
 }
 
-fn build_observation_array(file: impl AsRef<Path>, entries: &[IndexEntry]) -> Result<()> {
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct Normalization {
+    mean: f32,
+    sd: f32,
+}
+
+impl Normalization {
+    pub fn new<D: Dimension>(view: ArrayView<f32, D>) -> Self {
+        let (s, c) = view.iter().fold((0., 0), |(s, c), v| (s + v, c + 1));
+        let mean = s / c as f32;
+
+        let (s, c) = view
+            .iter()
+            .fold((0., 0), |(s, c), v| ((v - mean).powi(2) + s, c + 1));
+        let sd = s / c as f32;
+
+        Self { mean, sd }
+    }
+
+    #[inline]
+    pub fn norm(&self, value: f32) -> f32 {
+        (value - self.mean) / self.sd
+    }
+}
+
+fn build_observation_array(
+    file: impl AsRef<Path>,
+    entries: &[IndexEntry],
+    norm: Option<Normalization>,
+) -> Result<Normalization> {
     let mut observations =
         Array4::<f32>::zeros((entries.len(), IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH));
     observations
@@ -129,19 +158,25 @@ fn build_observation_array(file: impl AsRef<Path>, entries: &[IndexEntry]) -> Re
             for y in 0..img.height() {
                 for x in 0..img.width() {
                     let pixel = img.get_pixel(x, y);
-                    v[[0, y as usize, x as usize]] = pixel.0[0] as f32 / 255.;
-                    v[[1, y as usize, x as usize]] = pixel.0[1] as f32 / 255.;
-                    v[[2, y as usize, x as usize]] = pixel.0[2] as f32 / 255.;
+                    v[[0, y as usize, x as usize]] = pixel.0[0] as f32;
+                    v[[1, y as usize, x as usize]] = pixel.0[1] as f32;
+                    v[[2, y as usize, x as usize]] = pixel.0[2] as f32;
                 }
             }
 
             Ok(())
         })?;
 
+    let norm = match norm {
+        Some(norm) => norm,
+        None => Normalization::new(observations.view()),
+    };
+    observations.par_mapv_inplace(|v| norm.norm(v));
+
     let mut file = BufWriter::new(File::create(file)?);
     rmp_serde::encode::write(&mut file, &observations)?;
 
-    Ok(())
+    Ok(norm)
 }
 
 fn build_label_index(entries: &[IndexEntry]) -> BTreeMap<alias::String, usize> {

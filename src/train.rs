@@ -33,7 +33,7 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
     // let net = vgg_16(&vs.root(), LABLES, true);
     spinner.stop_with_message("Network constructed.");
 
-    let epochs = 4i64;
+    let epochs = 3i64;
     let batch_size = 16;
     let mut test_accuracy = 0.;
     let progress = ProgressBar::new(m.train_iter(batch_size).count() as u64 * epochs as u64);
@@ -42,8 +42,8 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
             .unwrap(),
     );
 
-    // let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
-    let mut opt = nn::AdamW::default().build(&vs, 1e-3)?;
+    let mut opt = nn::Adam::default().build(&vs, 1e-3)?;
+    // let mut opt = nn::AdamW::default().build(&vs, 1e-3)?;
     for epoch in 0..epochs {
         opt.set_lr(learning_rate(epoch));
         for (bimages, blabels) in m.train_iter(batch_size).shuffle().to_device(vs.device()) {
@@ -61,14 +61,13 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
             progress.inc(1);
         }
 
-        // let spinner = Spinner::new(
-        //     spinners::Aesthetic,
-        //     "Testing network accuracy...",
-        //     Color::Cyan,
-        // );
-        test_accuracy =
-            net.batch_accuracy_for_logits(&m.test_images, &m.test_labels, vs.device(), 512);
-        // spinner.stop_with_message(&format!("Epoch {:4}: {:5.2}%", epoch, 100. * test_accuracy));
+        test_accuracy = progress.suspend(|| {
+            let spinner = Spinner::new(spinners::Aesthetic, "Testing accuracy...", Color::Cyan);
+            let value =
+                net.batch_accuracy_for_logits(&m.test_images, &m.test_labels, vs.device(), 512);
+            spinner.stop();
+            value
+        });
     }
     progress.finish();
     Ok(())
