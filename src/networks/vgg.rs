@@ -12,8 +12,14 @@ pub fn vgg_16(vs: &nn::Path, classes: i64, train: bool) -> SequentialT {
         .add(conv_block(vs, 256, 512))
         .add(conv_block(vs, 512, 512))
         .add(conv_pool_block(vs, 512, 512))
+        // insert
+        .add(conv_block(vs, 512, 512))
+        .add(conv_block(vs, 512, 512))
+        .add(conv_pool_block(vs, 512, 512))
+        // insert
         .add_fn(|x| x.flat_view())
-        .add(linear_block(vs, 57344, 4096, train))
+        // .add(linear_block(vs, 57344, 4096, train))
+        .add(linear_block(vs, 14336, 4096, train))
         .add(linear_block(vs, 4096, 4096, train))
         .add(nn::linear(vs, 4096, classes, Default::default()))
 }

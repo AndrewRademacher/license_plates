@@ -2,6 +2,7 @@ use std::{
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use anyhow::Result;
@@ -10,7 +11,11 @@ use ndarray::{Array1, Array4};
 use spinoff::{spinners, Color, Spinner};
 use tch::{
     nn::{self, ModuleT, OptimizerConfig},
-    vision::dataset::Dataset,
+    vision::{
+        dataset::Dataset,
+        resnet::{resnet152, resnet34, resnet50},
+        vgg::vgg16,
+    },
     Device, Tensor,
 };
 
@@ -31,11 +36,12 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
 
     let spinner = Spinner::new(spinners::Aesthetic, "Constructing network...", Color::Cyan);
     let vs = nn::VarStore::new(device);
-    let net = fast_resnet(&vs.root());
+    // let net = fast_resnet(&vs.root());
     // let net = vgg_16(&vs.root(), LABLES, true);
+    let net = resnet50(&vs.root(), LABLES);
     spinner.stop_with_message("Network constructed.");
 
-    let epochs = 3i64;
+    let epochs = 10i64;
     let batch_size = 16;
     let mut test_accuracy = 0.;
     let progress = ProgressBar::new(m.train_iter(batch_size).count() as u64 * epochs as u64);
@@ -49,9 +55,16 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
     for epoch in 0..epochs {
         opt.set_lr(learning_rate(epoch));
         for (bimages, blabels) in m.train_iter(batch_size).shuffle().to_device(vs.device()) {
-            let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
+            // let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
             let loss = net
                 .forward_t(&bimages, true)
+                // .cross_entropy_loss(
+                //     &blabels,
+                //     None::<Tensor>,
+                //     tch::Reduction::Mean,
+                //     -100,
+                //     0.0,
+                // );
                 .cross_entropy_for_logits(&blabels);
             opt.backward_step(&loss);
 
@@ -66,7 +79,7 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
         test_accuracy = progress.suspend(|| {
             let spinner = Spinner::new(spinners::Aesthetic, "Testing accuracy...", Color::Cyan);
             let value =
-                net.batch_accuracy_for_logits(&m.test_images, &m.test_labels, vs.device(), 512);
+                net.batch_accuracy_for_logits(&m.test_images, &m.test_labels, vs.device(), 64);
             spinner.stop();
             value
         });
