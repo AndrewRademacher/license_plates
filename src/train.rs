@@ -21,7 +21,9 @@ use crate::{
 };
 
 pub fn run(data: PathBuf, _args: Train) -> Result<()> {
-    let device = Device::Mps;
+    // let device = Device::Mps;
+    // let device = Device::Cpu;
+    let device = Device::cuda_if_available();
 
     let spinner = Spinner::new(spinners::Aesthetic, "Loading training set...", Color::Cyan);
     let m = load_dataset(data)?;
