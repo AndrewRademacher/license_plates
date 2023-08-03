@@ -20,7 +20,7 @@ use crate::{
 };
 
 pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
-    let observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
+    let mut observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building label map...", Color::Cyan);
     let label_map = build_label_index(&observations.train);
@@ -28,6 +28,8 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     for (name, number) in label_map.iter() {
         println!("\t{:2}: {}", number, name);
     }
+
+    // observations.train = observations.train.into_iter().take(16).collect();
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building train arrays...", Color::Cyan);
     let norm = build_observation_array(data.join("train.array"), &observations.train, None)?;
@@ -55,6 +57,8 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
         &label_map,
     )?;
     spinner.stop_with_message("Valid arrays complete.");
+
+    println!("{:?}", norm);
 
     Ok(())
 }
@@ -123,14 +127,8 @@ pub struct Normalization {
 
 impl Normalization {
     pub fn new<D: Dimension>(view: ArrayView<f32, D>) -> Self {
-        let (s, c) = view.iter().fold((0., 0), |(s, c), v| (s + v, c + 1));
-        let mean = s / c as f32;
-
-        let (s, c) = view
-            .iter()
-            .fold((0., 0), |(s, c), v| ((v - mean).powi(2) + s, c + 1));
-        let sd = s / c as f32;
-
+        let mean = view.mean().unwrap();
+        let sd = view.std(0.);
         Self { mean, sd }
     }
 
@@ -158,9 +156,9 @@ fn build_observation_array(
             for y in 0..img.height() {
                 for x in 0..img.width() {
                     let pixel = img.get_pixel(x, y);
-                    v[[0, y as usize, x as usize]] = pixel.0[0] as f32;
-                    v[[1, y as usize, x as usize]] = pixel.0[1] as f32;
-                    v[[2, y as usize, x as usize]] = pixel.0[2] as f32;
+                    v[[0, y as usize, x as usize]] = pixel.0[0] as f32 / 255.;
+                    v[[1, y as usize, x as usize]] = pixel.0[1] as f32 / 255.;
+                    v[[2, y as usize, x as usize]] = pixel.0[2] as f32 / 255.;
                 }
             }
 

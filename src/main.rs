@@ -5,7 +5,6 @@ use clap::Parser;
 mod args;
 mod consts;
 mod inference;
-mod networks;
 mod prepare;
 mod train;
 
