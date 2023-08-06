@@ -20,7 +20,7 @@ use crate::{
 };
 
 pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
-    let mut observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
+    let observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building label map...", Color::Cyan);
     let label_map = build_label_index(&observations.train);
@@ -28,8 +28,6 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     for (name, number) in label_map.iter() {
         println!("\t{:2}: {}", number, name);
     }
-
-    // observations.train = observations.train.into_iter().take(16).collect();
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building train arrays...", Color::Cyan);
     let norm = build_observation_array(data.join("train.array"), &observations.train, None)?;

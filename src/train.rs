@@ -26,7 +26,6 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
     let spinner = Spinner::new(spinners::Aesthetic, "Constructing network...", Color::Cyan);
     let vs = nn::VarStore::new(device);
     let net = resnet50(&vs.root(), LABELS);
-    // let net = fast_resnet(&vs.root());
     spinner.stop_with_message("Network constructed.");
 
     let epochs = 150i64;
@@ -38,28 +37,22 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
             .unwrap(),
     );
 
-    let mut opt = nn::AdamW::default().build(&vs, 1e-3)?;
-    // let mut opt = nn::Sgd {
-    //     momentum: 0.9,
-    //     dampening: 0.,
-    //     wd: 5e-4,
-    //     nesterov: true,
-    // }
-    // .build(&vs, 0.)?;
+    let mut opt = nn::Sgd {
+        momentum: 0.9,
+        dampening: 0.,
+        wd: 5e-4,
+        nesterov: true,
+    }
+    .build(&vs, 0.)?;
     for epoch in 0..epochs {
         opt.set_lr(learning_rate(epoch));
-        for (bimages, blabels) in m.train_iter(batch_size).shuffle().to_device(vs.device()) {
-            let bimages = tch::vision::dataset::augmentation(&bimages, true, 4, 8);
+        for (batch_images, batch_labels) in
+            m.train_iter(batch_size).shuffle().to_device(vs.device())
+        {
+            let batch_images = tch::vision::dataset::augmentation(&batch_images, true, 4, 8);
             let loss = net
-                .forward_t(&bimages, true)
-                // .cross_entropy_loss(
-                //     &blabels,
-                //     None::<Tensor>,
-                //     tch::Reduction::Mean,
-                //     -100,
-                //     0.0,
-                // );
-                .cross_entropy_for_logits(&blabels);
+                .forward_t(&batch_images, true)
+                .cross_entropy_for_logits(&batch_labels);
             opt.backward_step(&loss);
 
             progress.set_message(format!(

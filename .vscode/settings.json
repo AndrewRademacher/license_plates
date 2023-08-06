@@ -5,6 +5,7 @@
         "imageops",
         "indicatif",
         "inplace",
+        "logits",
         "mapv",
         "ndarray",
         "nesterov",
