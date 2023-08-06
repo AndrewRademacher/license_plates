@@ -16,7 +16,7 @@ use tch::{
 
 use crate::{args::Train, consts::LABELS};
 
-pub fn run(data: PathBuf, _args: Train) -> Result<()> {
+pub fn run(data: PathBuf, args: Train) -> Result<()> {
     let device = Device::cuda_if_available();
 
     let spinner = Spinner::new(spinners::Aesthetic, "Loading training set...", Color::Cyan);
@@ -72,6 +72,10 @@ pub fn run(data: PathBuf, _args: Train) -> Result<()> {
         });
     }
     progress.finish();
+
+    let spinner = Spinner::new(spinners::Aesthetic, "Saving model...", Color::Cyan);
+    vs.save(args.model)?;
+    spinner.stop();
     Ok(())
 }
 
