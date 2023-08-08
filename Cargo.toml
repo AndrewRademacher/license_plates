@@ -18,6 +18,7 @@ rayon = "1.7.0"
 rmp = "0.8.12"
 rmp-serde = "1.1.2"
 serde = { version = "1.0.174", features = ["derive"] }
+serde_json = "1.0.104"
 smartstring = { version = "1.0.1", features = ["serde"] }
 spinoff = "0.7.0"
 tch = { version = "0.13.0", features = ["download-libtorch"] }

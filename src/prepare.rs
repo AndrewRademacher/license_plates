@@ -19,7 +19,7 @@ use crate::{
     consts::{IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH},
 };
 
-pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
+pub fn run(data: PathBuf, args: Prepare) -> Result<()> {
     let observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building label map...", Color::Cyan);
@@ -56,7 +56,8 @@ pub fn run(data: PathBuf, _args: Prepare) -> Result<()> {
     )?;
     spinner.stop_with_message("Valid arrays complete.");
 
-    println!("{:?}", norm);
+    std::fs::write(&args.norm, serde_json::to_vec_pretty(&norm)?)?;
+    println!("Saved normalization to {:?}", args.norm);
 
     Ok(())
 }

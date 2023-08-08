@@ -742,6 +742,7 @@ dependencies = [
  "rmp",
  "rmp-serde",
  "serde",
+ "serde_json",
  "smartstring",
  "spinoff",
  "tch",

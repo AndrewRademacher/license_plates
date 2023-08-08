@@ -22,7 +22,11 @@ pub enum Command {
 }
 
 #[derive(Debug, Parser)]
-pub struct Prepare {}
+pub struct Prepare {
+    /// The file wherein normalization information is stored.
+    #[clap(short = 'n', long = "norm", about)]
+    pub norm: PathBuf,
+}
 
 #[derive(Debug, Parser)]
 pub struct Train {
