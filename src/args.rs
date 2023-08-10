@@ -26,6 +26,9 @@ pub struct Prepare {
     /// The file wherein normalization information is stored.
     #[clap(short = 'n', long = "norm", about)]
     pub norm: PathBuf,
+    /// A mapping of string labels to integers.
+    #[clap(short = 'l', long = "label", about)]
+    pub label_map: PathBuf,
 }
 
 #[derive(Debug, Parser)]
@@ -40,6 +43,12 @@ pub struct Inference {
     /// The model to use when inferring.
     #[clap(short = 'm', long = "model", about)]
     pub model: PathBuf,
+    /// The normalization values used in training.
+    #[clap(short = 'n', long = "normalization", about)]
+    pub normalization: PathBuf,
+    /// The map of string labels to integers.
+    #[clap(short = 'l', long = "label", about)]
+    pub label_map: PathBuf,
     /// The image file to run inference upon.
     #[clap(short = 'i', long = "image", about)]
     pub image: PathBuf,

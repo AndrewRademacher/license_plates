@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "argmax",
         "consts",
         "cuda",
         "imageops",
@@ -10,6 +11,7 @@
         "ndarray",
         "nesterov",
         "powi",
-        "smartstring"
+        "smartstring",
+        "softmax"
     ]
 }

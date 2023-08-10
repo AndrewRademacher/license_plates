@@ -23,7 +23,8 @@ pub fn run(data: PathBuf, args: Prepare) -> Result<()> {
     let observations = index_observations(data.join("plates"), data.join("plates/plates.csv"))?;
 
     let spinner = Spinner::new(spinners::Aesthetic, "Building label map...", Color::Cyan);
-    let label_map = build_label_index(&observations.train);
+    let label_map: BTreeMap<smartstring::SmartString<smartstring::LazyCompact>, usize> =
+        build_label_index(&observations.train);
     spinner.stop_with_message(&format!("Label map contains {} labels.", label_map.len()));
     for (name, number) in label_map.iter() {
         println!("\t{:2}: {}", number, name);
@@ -57,6 +58,7 @@ pub fn run(data: PathBuf, args: Prepare) -> Result<()> {
     spinner.stop_with_message("Valid arrays complete.");
 
     std::fs::write(&args.norm, serde_json::to_vec_pretty(&norm)?)?;
+    std::fs::write(&args.label_map, serde_json::to_vec_pretty(&label_map)?)?;
     println!("Saved normalization to {:?}", args.norm);
 
     Ok(())
@@ -124,6 +126,8 @@ pub struct Normalization {
     sd: f32,
 }
 
+pub type LabelMap = BTreeMap<alias::String, usize>;
+
 impl Normalization {
     pub fn new<D: Dimension>(view: ArrayView<f32, D>) -> Self {
         let mean = view.mean().unwrap();
@@ -176,7 +180,7 @@ fn build_observation_array(
     Ok(norm)
 }
 
-fn build_label_index(entries: &[IndexEntry]) -> BTreeMap<alias::String, usize> {
+fn build_label_index(entries: &[IndexEntry]) -> LabelMap {
     entries
         .iter()
         .map(|v| v.labels.clone())
