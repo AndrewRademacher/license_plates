@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, time::Instant};
 
 use anyhow::Result;
 use image::GenericImageView;
@@ -29,26 +29,31 @@ pub fn run(args: Inference) -> Result<()> {
         .map(|(k, v)| (*v, k.clone()))
         .collect::<BTreeMap<_, _>>();
 
-    let img = image::open(args.image)?;
-    let mut array = Array4::<f32>::zeros((1, IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH));
-    for y in 0..img.height() {
-        for x in 0..img.width() {
-            let pixel = img.get_pixel(x, y);
-            array[[0, 0, y as usize, x as usize]] = pixel.0[0] as f32 / 255.;
-            array[[0, 1, y as usize, x as usize]] = pixel.0[1] as f32 / 255.;
-            array[[0, 2, y as usize, x as usize]] = pixel.0[2] as f32 / 255.;
+    for (idx, img_path) in args.image.into_iter().enumerate() {
+        let timer = Instant::now();
+        let img = image::open(img_path)?;
+        let mut array = Array4::<f32>::zeros((1, IMAGE_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH));
+        for y in 0..img.height() {
+            for x in 0..img.width() {
+                let pixel = img.get_pixel(x, y);
+                array[[0, 0, y as usize, x as usize]] = pixel.0[0] as f32 / 255.;
+                array[[0, 1, y as usize, x as usize]] = pixel.0[1] as f32 / 255.;
+                array[[0, 2, y as usize, x as usize]] = pixel.0[2] as f32 / 255.;
+            }
         }
-    }
-    drop(img);
-    array.par_mapv_inplace(|v| norm.norm(v));
-    let tensor: Tensor = array.try_into()?;
-    let tensor = tensor.to_device(device);
+        drop(img);
+        array.par_mapv_inplace(|v| norm.norm(v));
+        let tensor: Tensor = array.try_into()?;
+        let tensor = tensor.to_device(device);
 
-    let out = net.forward_t(&tensor, false).softmax(-1, tch::Kind::Float);
-    let out = out.argmax(1, false).int64_value(&[0]);
-    println!(
-        "The plate is from {}",
-        int_label_map.get(&(out as usize)).unwrap()
-    );
+        let out = net.forward_t(&tensor, false).softmax(-1, tch::Kind::Float);
+        let out = out.argmax(1, false).int64_value(&[0]);
+        println!(
+            "Plate {} is from {} ({}s)",
+            idx,
+            int_label_map.get(&(out as usize)).unwrap(),
+            timer.elapsed().as_secs_f32()
+        );
+    }
     Ok(())
 }

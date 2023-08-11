@@ -51,5 +51,5 @@ pub struct Inference {
     pub label_map: PathBuf,
     /// The image file to run inference upon.
     #[clap(short = 'i', long = "image", about)]
-    pub image: PathBuf,
+    pub image: Vec<PathBuf>,
 }
