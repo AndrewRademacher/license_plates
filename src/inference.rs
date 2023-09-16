@@ -16,7 +16,11 @@ use crate::{
 };
 
 pub fn run(args: Inference) -> Result<()> {
+    #[cfg(not(target_os = "macos"))]
     let device = Device::cuda_if_available();
+
+    #[cfg(target_os = "macos")]
+    let device = Device::Mps;
 
     let mut vs = nn::VarStore::new(device);
     let net = resnet50(&vs.root(), LABELS);

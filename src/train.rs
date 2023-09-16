@@ -17,7 +17,11 @@ use tch::{
 use crate::{args::Train, consts::LABELS};
 
 pub fn run(data: PathBuf, args: Train) -> Result<()> {
+    #[cfg(not(target_os = "macos"))]
     let device = Device::cuda_if_available();
+
+    #[cfg(target_os = "macos")]
+    let device = Device::Mps;
 
     let spinner = Spinner::new(spinners::Aesthetic, "Loading training set...", Color::Cyan);
     let m = load_dataset(data)?;
