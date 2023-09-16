@@ -1,5 +1,5 @@
-# PyTorch with CUDA
+# License Plates
 
-```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu115
-```
+1. Prepare input data with `just prepare`.
+1. Run training with `just train`.
+1. Infer some raw JPGs with `just infer`.
